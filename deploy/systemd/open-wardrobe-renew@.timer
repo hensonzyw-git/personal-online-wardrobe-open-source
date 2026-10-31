@@ -1,0 +1,12 @@
+[Unit]
+Description=Maintain the approved wardrobe client credential (%i)
+
+[Timer]
+OnCalendar=*-*-* 00,06,12,18:15:00 UTC
+RandomizedDelaySec=180
+AccuracySec=60
+Persistent=true
+Unit=open-wardrobe-renew@%i.service
+
+[Install]
+WantedBy=timers.target

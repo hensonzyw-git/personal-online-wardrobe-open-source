@@ -1,0 +1,8 @@
+# v0.5.1: user approved unlimited; read actual existing ledger before setting the usage floor.
+# Install only after deployment authorization.
+[Service]
+LoadCredential=model:/etc/open-wardrobe/model.json
+Environment=WARDROBE_MODEL_PROVIDER=deepseek
+Environment=WARDROBE_MODEL_CALL_LIMIT=unlimited
+Environment=WARDROBE_MODEL_LEDGER_EXPECTED_USED=2
+Environment=WARDROBE_WEATHER_PROVIDER=open-meteo

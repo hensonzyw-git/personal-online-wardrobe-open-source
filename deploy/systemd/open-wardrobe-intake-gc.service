@@ -1,0 +1,19 @@
+[Unit]
+Description=Collect expired isolated wardrobe intake sources after grace
+After=local-fs.target
+
+[Service]
+Type=oneshot
+User=open-wardrobe
+Group=open-wardrobe
+UMask=0077
+ExecStart=/opt/open-wardrobe/current/venv/bin/wardrobectl --data-root /var/lib/open-wardrobe collect-intakes
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateNetwork=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/open-wardrobe
+RestrictAddressFamilies=AF_UNIX
+TimeoutStartSec=120
+MemoryMax=256M

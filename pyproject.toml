@@ -1,0 +1,41 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "open-wardrobe"
+version = "0.8.0"
+description = "Self-hosted wardrobe catalog and outfit recommendation API"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.139,<1",
+  "pydantic>=2.13,<3",
+  "mcp==2.0.0",
+  "sqlalchemy>=2.0.51,<2.1",
+  "alembic>=1.18,<2",
+  "uvicorn>=0.51,<1",
+  "pillow>=12.3,<13",
+  "cryptography>=50,<51",
+  "httpx>=0.28,<1",
+]
+
+[project.scripts]
+wardrobectl = "wardrobe.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4,<9",
+    "httpx>=0.28,<1",
+    "ruff>=0.15,<1",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/wardrobe"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"alembic" = "wardrobe/migrations"
+
+[tool.pytest.ini_options]
+pythonpath = [".", "src"]
+testpaths = ["tests"]
+addopts = "-q"

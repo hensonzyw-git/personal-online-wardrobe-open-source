@@ -1,0 +1,19 @@
+[Unit]
+Description=Renew explicitly registered intake-only confirmation issuer (%i)
+After=local-fs.target
+
+[Service]
+Type=oneshot
+User=open-wardrobe
+Group=open-wardrobe
+UMask=0077
+ExecStart=/opt/open-wardrobe/current/venv/bin/wardrobectl --data-root /var/lib/open-wardrobe renew-intake-issuer --policy-file /etc/open-wardrobe/renewal/%i.json
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateNetwork=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/open-wardrobe
+RestrictAddressFamilies=AF_UNIX
+TimeoutStartSec=30
+MemoryMax=256M

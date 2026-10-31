@@ -1,0 +1,28 @@
+[Unit]
+Description=Open Wardrobe (private API and MCP)
+After=network.target
+
+[Service]
+Type=simple
+User=open-wardrobe
+Group=open-wardrobe
+WorkingDirectory=/var/lib/open-wardrobe
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=WEB_CONCURRENCY=1
+EnvironmentFile=/etc/open-wardrobe/runtime.env
+ExecStart=/opt/open-wardrobe/current/venv/bin/wardrobectl --data-root /var/lib/open-wardrobe serve --port 8830
+Restart=on-failure
+RestartSec=3
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/open-wardrobe
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+MemoryHigh=384M
+MemoryMax=512M
+LimitNOFILE=4096
+
+[Install]
+WantedBy=multi-user.target
