@@ -1,0 +1,68 @@
+:root {
+  /* surfaces */
+  --paper: #EEEBE2;        /* page background */
+  --surface: #F7F5EF;      /* cards */
+  --band: #E7E3D7;         /* latest section band */
+  --hatch: #E6E2D6;        /* diagonal placeholder hatch */
+  --dark: #26241F;         /* footer / EN banner / code blocks */
+
+  /* ink */
+  --ink: #1F1E1B;          /* primary text */
+  --body: #2b2a26;         /* article body */
+  --body-2: #3a3833;       /* secondary body */
+  --muted: #5C594F;        /* secondary text */
+  --muted-2: #65625A;
+  --meta: #8A867B;         /* meta / labels */
+
+  /* clay accent */
+  --clay: #C15F3C;
+  --clay-hover: #A94E30;
+  --clay-06: rgba(193, 95, 60, .06);
+  --clay-18: rgba(193, 95, 60, .18);
+  --clay-50: rgba(193, 95, 60, .5);
+
+  /* hairlines */
+  --line-08: rgba(31, 30, 27, .08);
+  --line-10: rgba(31, 30, 27, .1);
+  --line-12: rgba(31, 30, 27, .12);
+  --line-14: rgba(31, 30, 27, .14);
+  --line-16: rgba(31, 30, 27, .16);
+
+  /* type stacks — match the approved Claude Design source verbatim:
+     system sans for display + body, Space Mono (self-hosted) for labels. */
+  --display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC', sans-serif;
+  --sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', 'Helvetica Neue', sans-serif;
+  --mono: 'Space Mono', monospace;
+
+  /* layout */
+  --container: 1180px;
+  --pad-x: 40px;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.5 var(--sans); }
+main { max-width: var(--container); margin: 40px auto; padding: 0 var(--pad-x); }
+h1, h2 { font-family: var(--display); }
+.eyebrow { color: var(--clay); letter-spacing: .1em; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { border: 1px solid var(--line-16); border-radius: 999px; padding: 8px 16px; background: var(--surface); cursor: pointer; }
+button:hover { border-color: var(--clay); }
+button:disabled { opacity: .5; cursor: default; }
+:focus-visible { outline: 2px solid var(--clay); outline-offset: 3px; }
+label { display: flex; flex-direction: column; gap: 8px; }
+input, select, textarea { min-width: 0; max-width: 100%; border: 1px solid var(--line-16); border-radius: 12px; background: var(--surface); padding: 8px 12px; }
+textarea { min-height: 80px; resize: vertical; }
+#filters { display: flex; flex-wrap: wrap; align-items: end; gap: 16px; margin: 24px 0; }
+.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 24px 0; }
+article { border: 1px solid var(--line-16); border-radius: 16px; background: var(--surface); padding: 16px; overflow-wrap: anywhere; }
+article img { width: 100%; aspect-ratio: 1; object-fit: contain; }
+dialog { width: min(900px, calc(100% - 40px)); max-height: calc(100vh - 40px); border: 1px solid var(--line-16); border-radius: 16px; background: var(--paper); color: var(--ink); padding: 24px; overflow: auto; }
+dialog::backdrop { background: var(--line-16); }
+dialog header { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+#editor { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 24px 0; }
+fieldset { border: 1px solid var(--line-16); border-radius: 12px; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--mono); background: var(--band); padding: 16px; border-radius: 12px; }
+#record img { max-width: 100%; max-height: 400px; }
+#conflict, #detail-status { color: var(--clay-hover); }
+[hidden] { display: none !important; }
+@media (max-width: 860px) { main { padding: 0 22px; } .cards, #editor { grid-template-columns: 1fr; } dialog { padding: 16px; } }

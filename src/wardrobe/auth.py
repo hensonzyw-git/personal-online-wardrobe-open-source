@@ -38,6 +38,38 @@ AGENT_SCOPES = frozenset(
     }
 )
 HUMAN_SCOPES = frozenset({"human.decision", "human.preview", "human.intake_create"})
+OPERATOR_CLIENT_ID = "wardrobe-admin"
+OPERATOR_SCOPES = frozenset({"wardrobe.operator_write", "wardrobe.read"})
+
+
+def require_operator(principal: Principal) -> None:
+    """The private human UI is a separate authority, never an agent scope union."""
+    if (
+        principal.channel != "human_adapter"
+        or principal.client_id != OPERATOR_CLIENT_ID
+        or principal.scopes != OPERATOR_SCOPES
+    ):
+        raise BusinessError(
+            "SCOPE_DENIED", "This channel lacks the required permission", 403
+        )
+
+
+def recheck_operator(session, principal: Principal) -> None:
+    """Revalidate the complete dedicated grant before reads or idempotent replay."""
+    require_operator(principal)
+    for scope in OPERATOR_SCOPES:
+        recheck_grant(session, principal, required_scope=scope)
+    grant = session.get(ClientGrant, principal.grant_id)
+    if (
+        grant.created_at > int(time.time())
+        or grant.client_id != OPERATOR_CLIENT_ID
+        or grant.channel != "human_adapter"
+        or len(grant.scopes) != len(OPERATOR_SCOPES)
+        or frozenset(grant.scopes) != OPERATOR_SCOPES
+    ):
+        raise BusinessError(
+            "UNAUTHORIZED", "Authorization changed; obtain a fresh request context", 401
+        )
 
 
 def token_hash(token: str) -> str:
@@ -105,6 +137,24 @@ class PrivateServiceMiddleware:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
+        operator = scope["path"].startswith("/v1/operator/")
+        if operator:
+            downstream_send = send
+
+            async def operator_send(message):
+                if message["type"] == "http.response.start":
+                    message = {
+                        **message,
+                        "headers": [
+                            (key, value)
+                            for key, value in message.get("headers", [])
+                            if key.lower() != b"cache-control"
+                        ]
+                        + [(b"cache-control", b"no-store")],
+                    }
+                await downstream_send(message)
+
+            send = operator_send
         try:
             headers = scope.get("headers", [])
             hosts = [
@@ -125,6 +175,7 @@ class PrivateServiceMiddleware:
             ]
             if (
                 len(origins) > 1
+                or operator and origins
                 or origins
                 and origins[0] not in self.settings.allowed_origins
             ):
@@ -161,6 +212,8 @@ class PrivateServiceMiddleware:
                         "CHANNEL_DENIED", "This credential is not an agent channel", 403
                     )
                 scope["wardrobe.principal"] = principal
+                if operator:
+                    require_operator(principal)
             # Buffer only small JSON/control requests. Binary upload is streamed
             # under its own declared size limit, checked before creating a file.
             agent_binary = scope["method"] == "PUT" and re.fullmatch(
@@ -169,16 +222,31 @@ class PrivateServiceMiddleware:
             if scope["method"] in {"POST", "PUT", "PATCH", "DELETE"} and not (
                 scope["path"].endswith("/content") or agent_binary
             ):
+                if operator:
+                    content_types = [
+                        value.decode("latin-1")
+                        for key, value in headers
+                        if key.lower() == b"content-type"
+                    ]
+                    if len(content_types) != 1 or not re.fullmatch(
+                        r'application/json(?:\s*;\s*charset\s*=\s*(?:utf-8|"utf-8"))?\s*',
+                        content_types[0],
+                        re.IGNORECASE,
+                    ):
+                        raise BusinessError(
+                            "UNSUPPORTED_MEDIA_TYPE", "A JSON content type is required", 415
+                        )
                 chunks, count = [], 0
+                maximum = 64 * 1024 if operator else 1024 * 1024
                 while True:
                     message = await receive()
                     if message["type"] != "http.request":
                         return
                     chunk = message.get("body", b"")
                     count += len(chunk)
-                    if count > 1024 * 1024:
+                    if count > maximum:
                         raise BusinessError(
-                            "REQUEST_TOO_LARGE", "Control request exceeds 1 MiB", 413
+                            "REQUEST_TOO_LARGE", "Control request exceeds its size limit", 413
                         )
                     chunks.append(chunk)
                     if not message.get("more_body", False):

@@ -198,7 +198,13 @@ class AssetService:
 
     def content(self, principal, asset_id: str):
         principal.require("wardrobe.read")
+        return self._content(principal, asset_id)
+
+    def _content(self, principal, asset_id, *, garment_id=None, authorize=None):
+        """Internal loader; each caller supplies its own authenticated boundary."""
         with self.database.sessions.begin() as session:
+            if authorize:
+                authorize(session)
             asset = session.scalar(
                 select(Asset)
                 .join(GarmentAsset, GarmentAsset.asset_id == Asset.id)
@@ -207,6 +213,7 @@ class AssetService:
                     Asset.id == asset_id,
                     Garment.owner_id == principal.owner_id,
                     Garment.state == "active",
+                    *([Garment.id == garment_id] if garment_id is not None else []),
                 )
             )
             if asset is None:
@@ -219,10 +226,17 @@ class AssetService:
             return path, asset.mime
 
     def preview(self, principal, asset_id: str):
+        principal.require("wardrobe.read")
+        return self._preview(principal, asset_id)
+
+    def _preview(self, principal, asset_id, *, garment_id=None, authorize=None):
         def authorized_source():
-            principal.require("wardrobe.read")
             with self.database.sessions.begin() as session:
-                recheck_grant(session, principal, required_scope="wardrobe.read")
+                if authorize:
+                    authorize(session)
+                else:
+                    principal.require("wardrobe.read")
+                    recheck_grant(session, principal, required_scope="wardrobe.read")
                 asset = session.scalar(
                     select(Asset)
                     .join(GarmentAsset, GarmentAsset.asset_id == Asset.id)
@@ -231,6 +245,7 @@ class AssetService:
                         Asset.id == asset_id,
                         Garment.owner_id == principal.owner_id,
                         Garment.state == "active",
+                        *([Garment.id == garment_id] if garment_id is not None else []),
                     )
                 )
                 if asset is None:

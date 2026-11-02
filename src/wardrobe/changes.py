@@ -32,6 +32,23 @@ from .models import (
 from .writes import audit, bump_catalog, digest, idempotent
 
 
+def validate_restore(session, target, originals, now):
+    """Shared recovery rule; presence checks only, never asset mutation."""
+    if (
+        target.state != "deleted"
+        or target.restore_until is None
+        or target.restore_until <= now
+    ):
+        raise BusinessError("RESTORE_UNAVAILABLE", "Recovery window is closed", 409)
+    images = list(
+        session.scalars(
+            select(Asset).join(GarmentAsset).where(GarmentAsset.garment_id == target.id)
+        )
+    )
+    if not images or any(not (originals / asset.sha256).is_file() for asset in images):
+        raise BusinessError("RESTORE_UNAVAILABLE", "Recovery image is missing", 409)
+
+
 class GarmentPatch(StrictModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
     category: str | None = Field(default=None, min_length=1, max_length=100)
@@ -297,30 +314,7 @@ class ChangeService:
                 "INVALID_ARGUMENT", "Garment patch does not match its operation", 422
             )
         if change["operation"] == "restore":
-            if (
-                target.state != "deleted"
-                or not target.restore_until
-                or target.restore_until <= int(time.time())
-            ):
-                raise BusinessError(
-                    "RESTORE_UNAVAILABLE", "Recovery window is closed", 409
-                )
-            images = list(
-                session.scalars(
-                    select(Asset)
-                    .join(GarmentAsset)
-                    .where(GarmentAsset.garment_id == target.id)
-                )
-            )
-            if not images:
-                raise BusinessError(
-                    "RESTORE_UNAVAILABLE", "Recovery image is missing", 409
-                )
-            for asset in images:
-                if not (self.assets.originals / asset.sha256).is_file():
-                    raise BusinessError(
-                        "RESTORE_UNAVAILABLE", "Recovery image is missing", 409
-                    )
+            validate_restore(session, target, self.assets.originals, int(time.time()))
         elif target.state != "active":
             raise BusinessError("TARGET_REMOVED", "Target is no longer active", 409)
         patch = change["patch"]

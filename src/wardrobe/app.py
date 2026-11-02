@@ -16,7 +16,7 @@ from mcp.types import CallToolResult, TextContent, ToolAnnotations
 from pydantic import Field, ValidationError, create_model
 from sqlalchemy.exc import SQLAlchemyError
 from starlette.concurrency import run_in_threadpool
-from starlette.responses import FileResponse, JSONResponse
+from starlette.responses import FileResponse, JSONResponse, PlainTextResponse
 
 from .annotations import AnnotationService, SuggestionInput
 from .assets import AssetService, GarmentInput, UploadInput, create_garment
@@ -93,6 +93,9 @@ def create_app(
         database, settings.data_root, load_private_key(settings.data_root, "upload.key")
     )
     changes = ChangeService(database, assets, settings.audience)
+    from .operator_service import OperatorService
+
+    operator = OperatorService(database, catalog.cursor_key, assets)
     recommendations = RecommendationService(
         database,
         catalog,
@@ -621,6 +624,7 @@ def create_app(
     )
     app.state.database, app.state.catalog, app.state.mcp = database, catalog, mcp
     app.state.assets, app.state.changes = assets, changes
+    app.state.operator = operator
     app.state.recommendations = recommendations
     app.state.products = products
     app.state.agents = agents
@@ -671,6 +675,17 @@ def create_app(
             headers={"Cache-Control": "no-store"},
         )
 
+    @app.exception_handler(Exception)
+    async def unexpected_error(request, _error):
+        # ServerErrorMiddleware owns unhandled 500s outside our authentication
+        # middleware. Its response must independently protect the private tree.
+        if request.url.path.startswith("/v1/operator/"):
+            error = BusinessError("INTERNAL_ERROR", "Service operation failed", 500)
+            return JSONResponse(
+                error.response(), status_code=500, headers={"Cache-Control": "no-store"}
+            )
+        return PlainTextResponse("Internal Server Error", status_code=500)
+
     @app.get("/healthz")
     def health():
         return {"status": "ok"}
@@ -679,6 +694,9 @@ def create_app(
     from .agent_routes import register_agent_routes
 
     register_agent_routes(app, agents)
+    from .operator_routes import register_operator_routes
+
+    register_operator_routes(app, operator)
 
     @app.get("/v1/garments")
     def api_list(request: Request):
