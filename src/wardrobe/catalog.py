@@ -105,6 +105,9 @@ class CatalogService:
             "availability": row.availability,
             "revision": row.revision,
             "state": row.state,
+            "created_at": row.created_at,
+            "deleted_at": row.deleted_at,
+            "restore_until": row.restore_until,
             "identity_fields": row.identity_fields,
             "annotation_fields": {
                 key: row.annotation_fields.get(

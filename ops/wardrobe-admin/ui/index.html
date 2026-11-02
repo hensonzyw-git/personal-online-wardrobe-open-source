@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <title>个人衣橱后台</title>
+  <link rel="stylesheet" href="/wardrobe-admin/admin.css">
+  <script type="module" src="/wardrobe-admin/admin.js"></script>
+</head>
+<body>
+<main>
+  <p class="eyebrow">PERSONAL WARDROBE</p>
+  <h1>衣橱后台</h1>
+  <p>仅供本人使用。请使用个人浏览器配置文件和密码管理器。这里没有独立的网页登录会话。</p>
+  <noscript>衣橱后台需要 JavaScript 才能安全读取与保存，请启用后刷新。</noscript>
+  <form id="filters">
+    <label>目录视图<select id="state"><option value="active">衣橱</option><option value="deleted">回收站</option></select></label>
+    <label>分类<select id="category"><option value="">全部分类</option></select></label>
+    <label>入库时间<select id="order"><option value="desc">最新入库</option><option value="asc">最早入库</option></select></label>
+    <button type="button" id="reload">重新加载</button>
+    <button type="button" id="more-categories" hidden>加载更多分类</button>
+  </form>
+  <p id="status" role="status" aria-live="polite"></p>
+  <section id="cards" class="cards" aria-label="衣物列表"></section>
+  <button type="button" id="more" hidden>加载更多衣物</button>
+  <dialog id="detail" aria-labelledby="detail-title">
+    <header><h2 id="detail-title">衣物详情</h2><button id="close-detail" type="button">关闭</button></header>
+    <p id="detail-status" role="status" aria-live="polite"></p>
+    <section id="record"></section>
+    <form id="editor"></form>
+    <p id="conflict" role="alert"></p>
+    <button id="accept-revision" type="button" hidden>对照后采用最新版本重新确认</button>
+    <button id="save" type="button" disabled>查看修改并保存</button>
+    <button id="retry" type="button" hidden>按原操作编号重试未决操作</button>
+    <button id="delete" type="button">软删除</button>
+    <button id="restore" type="button" hidden>恢复衣物</button>
+  </dialog>
+  <dialog id="confirm" aria-labelledby="confirm-title">
+    <h2 id="confirm-title">确认操作</h2>
+    <pre id="confirm-body"></pre>
+    <button id="confirm-no" type="button">取消</button>
+    <button id="confirm-yes" type="button">确认执行</button>
+  </dialog>
+</main>
+</body>
+</html>

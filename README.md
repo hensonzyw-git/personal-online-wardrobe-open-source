@@ -31,7 +31,9 @@ destructive changes.
 ## Quick start (local, synthetic)
 
 ```sh
+mkdir -p .local && chmod 700 .local
 cp .env.example .local/runtime.env   # then edit; keep mode 600; do not commit
+chmod 600 .local/runtime.env
 uv sync --locked
 uv run wardrobectl --data-root .local/wardrobe init-db
 mkdir -p .local/credentials && chmod 700 .local/credentials
@@ -49,11 +51,26 @@ The server listens on loopback by default. Use
 `Authorization: Bearer …` for API, MCP (`/mcp`), and image routes.
 Health probe: `GET /healthz` (no private content).
 
+## Private administration UI
+
+An optional Chinese-language administration UI supports time-sorted catalog
+paging, protected previews/originals, confirmed single-item editing, and a 30-day
+trash/restore flow. It uses a separate operator grant, never the agent credential.
+
+See [admin setup and API](docs/admin.md) for the dedicated proxy, login,
+Nginx/systemd examples, credential rotation and known limitations. No public
+access or deployment is enabled by cloning this repository.
+
 ## Tests
+
+Install Node.js as well for the proxy/UI regression tests included in the suite.
 
 ```sh
 uv sync --locked --group dev
 uv run pytest
+# Standalone proxy / UI checks:
+uv run python tests/wardrobe_admin_test.py
+node --test tests/wardrobe-admin-ui.test.mjs
 ```
 
 Use synthetic fixtures only. Do not point tests at production data.
@@ -84,6 +101,7 @@ through `create_app(product_provider=...)` with the existing review and publicat
 
 - FastAPI HTTP API and MCP tools for garments, assets, change proposals,
   recommendations, feedback/history, and optional product drafts
+- Optional private admin API/UI and restricted Unix-socket adapter under `ops/wardrobe-admin/`
 - Alembic migrations shipped with the package
 - Example systemd / nginx templates under `deploy/`
 - Offline unit/integration tests with synthetic data

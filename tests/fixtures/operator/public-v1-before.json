@@ -1,0 +1,15 @@
+{
+  "source_base": "2a45d7ea0ddbf1d8f708c241535680f927f14493",
+  "source_path": "src/wardrobe/catalog.py",
+  "source_sha256": "7eacd3a9b52d3d42e89b2615a4936e8682bfcc713bda3f6fca47981f6de47e32",
+  "synthetic_key_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+  "payload": {
+    "v": 1,
+    "owner": "00000000-0000-0000-0000-000000000001",
+    "category": null,
+    "limit": 2,
+    "revision": 0,
+    "last": "00000000-0000-0000-0000-00000000000b"
+  },
+  "cursor": "bQQIAKcfcToDlf_yLXdySkzsLrkXgU0qqCUcdUWFwyh7ImNhdGVnb3J5IjpudWxsLCJsYXN0IjoiMDAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDBiIiwibGltaXQiOjIsIm93bmVyIjoiMDAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAxIiwicmV2aXNpb24iOjAsInYiOjF9"
+}

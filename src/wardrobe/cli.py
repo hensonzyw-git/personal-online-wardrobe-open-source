@@ -11,7 +11,13 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from cryptography.hazmat.primitives.serialization import load_pem_public_key
 from sqlalchemy.exc import SQLAlchemyError
 
-from .auth import AGENT_SCOPES, HUMAN_SCOPES, token_hash
+from .auth import (
+    AGENT_SCOPES,
+    HUMAN_SCOPES,
+    OPERATOR_CLIENT_ID,
+    OPERATOR_SCOPES,
+    token_hash,
+)
 from .catalog_import import import_catalog, load_batch
 from .config import Settings
 from .db import Database, load_cursor_key, load_private_key
@@ -122,6 +128,55 @@ def grant_client(
         )
 
 
+def grant_operator(
+    database: Database,
+    settings: Settings,
+    *,
+    owner_id: str,
+    token: str,
+    ttl_seconds: int = 86400,
+    client_id: str = OPERATOR_CLIENT_ID,
+    channel: str = "human_adapter",
+    scopes: list[str] | None = None,
+) -> None:
+    """Issue the private UI grant only; unlike grant-client, never create an owner."""
+    owner_id = str(UUID(owner_id))
+    scopes = sorted(OPERATOR_SCOPES) if scopes is None else scopes
+    if (
+        client_id != OPERATOR_CLIENT_ID
+        or channel != "human_adapter"
+        or not isinstance(scopes, list)
+        or len(scopes) != len(OPERATOR_SCOPES)
+        or any(not isinstance(scope, str) for scope in scopes)
+        or frozenset(scopes) != OPERATOR_SCOPES
+    ):
+        raise ValueError("Invalid operator identity or scopes")
+    if (
+        type(ttl_seconds) is not int
+        or not 1 <= ttl_seconds <= 604800
+        or not isinstance(token, str)
+        or not 32 <= len(token) <= 512
+    ):
+        raise ValueError("Token length or lifetime is invalid")
+    now = int(time.time())
+    with database.write() as session:
+        if session.get(Owner, owner_id) is None:
+            raise ValueError("Operator owner must already exist")
+        session.add(
+            ClientGrant(
+                token_hash=token_hash(token),
+                owner_id=owner_id,
+                client_id=OPERATOR_CLIENT_ID,
+                scopes=sorted(OPERATOR_SCOPES),
+                audience=settings.audience,
+                channel="human_adapter",
+                created_at=now,
+                expires_at=now + ttl_seconds,
+                revoked_at=None,
+            )
+        )
+
+
 def main():
     parser = argparse.ArgumentParser(prog="wardrobectl")
     parser.add_argument("--data-root", type=Path)
@@ -157,6 +212,10 @@ def main():
     grant.add_argument("--token-file", type=Path, required=True)
     grant.add_argument("--ttl-seconds", type=int, default=604800)
     grant.add_argument("--channel", choices=["agent", "human_adapter"], default="agent")
+    operator_grant = commands.add_parser("grant-operator")
+    operator_grant.add_argument("--owner-id", required=True)
+    operator_grant.add_argument("--token-file", type=Path, required=True)
+    operator_grant.add_argument("--ttl-seconds", type=int, default=86400)
     revoke = commands.add_parser("revoke-client")
     revoke.add_argument("--token-file", type=Path, required=True)
     issuer = commands.add_parser("register-issuer")
@@ -305,7 +364,7 @@ def main():
                     )
                 )
             )
-        elif args.command == "grant-client":
+        elif args.command in {"grant-client", "grant-operator"}:
             database.assert_initialized()
             # Never print credentials. Only create a new private token file.
             descriptor = os.open(
@@ -317,16 +376,25 @@ def main():
                     file.write(token)
                     file.flush()
                     os.fsync(file.fileno())
-                grant_client(
-                    database,
-                    settings,
-                    owner_id=args.owner_id,
-                    client_id=args.client_id,
-                    scopes=args.scope,
-                    token=token,
-                    ttl_seconds=args.ttl_seconds,
-                    channel=args.channel,
-                )
+                if args.command == "grant-operator":
+                    grant_operator(
+                        database,
+                        settings,
+                        owner_id=args.owner_id,
+                        token=token,
+                        ttl_seconds=args.ttl_seconds,
+                    )
+                else:
+                    grant_client(
+                        database,
+                        settings,
+                        owner_id=args.owner_id,
+                        client_id=args.client_id,
+                        scopes=args.scope,
+                        token=token,
+                        ttl_seconds=args.ttl_seconds,
+                        channel=args.channel,
+                    )
             except Exception:
                 args.token_file.unlink()
                 raise
